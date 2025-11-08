@@ -1,7 +1,6 @@
-import ScrollScene from './components/ScrollScene'
+// App.tsx
+import ScrollScenes from "./components/ScrollScene"
 
-function App() {
-  return <ScrollScene />
+export default function App() {
+  return <ScrollScenes />
 }
-
-export default App
