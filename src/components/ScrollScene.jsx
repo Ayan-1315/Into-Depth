@@ -1,191 +1,145 @@
-import { Canvas, useFrame } from '@react-three/fiber'
-import { ScrollControls, useScroll, Float, Html, Environment, PerspectiveCamera } from '@react-three/drei'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { ScrollControls, useScroll, PerspectiveCamera, Html } from '@react-three/drei'
 import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
 
-/**
- * FullscreenScrollScenes
- * - Full-bleed canvas with ScrollControls paging
- * - Each page is a distinct scene with its own object and micro-animations
- * - Subtle camera movement tied to scroll
- */
-export default function ScrollScene() {
-  const PAGES = 4
+// Tweak these
+const PAGES = 6
+const DEPTH_PER_PAGE = 6
+const START_Z = 8
+const PAN_AMPLITUDE = 0.9
+const FOV_BASE = 45
+const FOV_WOBBLE = 10
+
+export default function App() {
   return (
-    <div className="w-screen h-screen fixed inset-0 bg-black">
-      <Canvas gl={{ antialias: true }} dpr={[1, 2]}>
-        {/* Single global lights/environment */}
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[4, 6, 4]} intensity={1.2} castShadow />
-        <Environment preset="city" />
+    <div className="fixed inset-0 w-screen h-screen">
+      {/* Overlay UI (optional) */}
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-20 flex items-center justify-between p-4 text-white">
+        <h1 className="text-xl font-semibold tracking-tight">Into Depth</h1>
+        <p className="text-xs opacity-70">Scroll ↓</p>
+      </div>
 
-        {/* Camera rig */}
-        <PerspectiveCamera makeDefault fov={50} position={[0, 0, 10]} />
-
-        <ScrollControls pages={PAGES} damping={0.2} distance={1}>
-          {/* 3D content bound to scroll */}
-          <Scenes pages={PAGES} />
-
-          {/* HTML overlays per page (optional labels/instructions) */}
-          <HtmlOverlay pages={PAGES} />
-        </ScrollControls>
+      <Canvas
+        className="absolute inset-0 w-full h-full"
+        gl={{ antialias: true }}
+        dpr={[1, 2]}
+      >
+        <Scene />
       </Canvas>
     </div>
   )
 }
 
-/** Utility: get normalized progress [0..1] for a given page index */
-function usePageProgress(totalPages) {
-  const scroll = useScroll()
-  return (index) => {
-    // Each page occupies 1/total span of scroll.range
-    const start = index / totalPages
-    const len = 1 / totalPages
-    return THREE.MathUtils.clamp((scroll.offset - start) / len, 0, 1)
-  }
-}
+function Scene() {
+  // Distinct background + box color per page
+  const palette = useMemo(() => {
+    const rand = (seed) => {
+      let x = Math.sin(seed) * 10000
+      return x - Math.floor(x)
+    }
+    return Array.from({ length: PAGES }).map((_, i) => {
+      const h1 = Math.floor(rand(i + 1) * 360)
+      const h2 = (h1 + 180) % 360
+      const bg = new THREE.Color(`hsl(${h1} 65% 12%)`)
+      const box = new THREE.Color(`hsl(${h2} 70% 55%)`)
+      return { bg, box }
+    })
+  }, [])
 
-function Scenes({ pages }) {
-  const getProgress = usePageProgress(pages)
-  const group = useRef()
-  const camRig = useRef({ x: 0, y: 0 })
-  const scroll = useScroll()
-
-  useFrame((state, dt) => {
-    // Subtle camera parallax based on total scroll
-    const t = state.clock.getElapsedTime()
-    const s = scroll.offset
-    camRig.current.x = THREE.MathUtils.damp(camRig.current.x, (s - 0.5) * 1.6, 3, dt)
-    camRig.current.y = THREE.MathUtils.damp(camRig.current.y, Math.sin(t * 0.2) * 0.2, 3, dt)
-    state.camera.position.x = camRig.current.x
-    state.camera.position.y = camRig.current.y
-    state.camera.lookAt(0, 0, 0)
-  })
+  const panTargets = useMemo(() => {
+    const arr = []
+    for (let i = 0; i < PAGES; i++) {
+      const angle = (i * Math.PI * 0.7) % (Math.PI * 2)
+      arr.push(new THREE.Vector2(Math.cos(angle) * 0.8, Math.sin(angle * 0.7) * 0.4))
+    }
+    return arr
+  }, [])
 
   return (
-    <group ref={group}>
-      <SceneOne progress={getProgress(0)} />
-      <SceneTwo progress={getProgress(1)} />
-      <SceneThree progress={getProgress(2)} />
-      <SceneFour progress={getProgress(3)} />
-    </group>
+    <>
+      <PerspectiveCamera makeDefault position={[0, 0, START_Z]} fov={FOV_BASE} />
+      {/* ScrollControls provides its own internal scroll (no window scroll needed) */}
+      <ScrollControls pages={PAGES} damping={0.18}>
+        <Rig palette={palette} panTargets={panTargets} />
+        {Array.from({ length: PAGES }).map((_, i) => (
+          <Page key={i} index={i} z={-i * DEPTH_PER_PAGE} color={palette[i].box} />
+        ))}
+      </ScrollControls>
+    </>
   )
 }
 
-/**
- * Each scene is isolated with its own root group and object.
- * Visibility/animation is driven by `progress` (0..1) for that page.
- */
-function SceneOne({ progress }) {
-  const ref = useRef()
+/** Camera rig: forward dive + pan + per-page background + FOV wobble */
+function Rig({ palette, panTargets }) {
+  const scroll = useScroll()
+  const { camera, scene } = useThree()
+  const target = useRef(new THREE.Vector3())
+  const tmp = useRef(new THREE.Color())
+
   useFrame((_, dt) => {
-    if (!ref.current) return
-    ref.current.rotation.y += dt * 0.6
+    const t = scroll.offset // 0..1
+    const endZ = -((PAGES - 1) * DEPTH_PER_PAGE) - 2
+    const z = THREE.MathUtils.lerp(START_Z, endZ, t)
+
+    // Which two pages are we between?
+    const pageF = t * (PAGES - 1)
+    const p0 = Math.floor(pageF)
+    const p1 = Math.min(p0 + 1, PAGES - 1)
+    const localT = pageF - p0
+    const easeT = THREE.MathUtils.smoothstep(localT, 0, 1)
+
+    // Pan blend
+    const pan0 = panTargets[p0]
+    const pan1 = panTargets[p1]
+    const panX = THREE.MathUtils.lerp(pan0.x, pan1.x, easeT) * PAN_AMPLITUDE
+    const panY = THREE.MathUtils.lerp(pan0.y, pan1.y, easeT) * PAN_AMPLITUDE
+
+    // FOV wobble
+    const fov = FOV_BASE + Math.sin(t * Math.PI) * FOV_WOBBLE
+
+    // Set background: distinct per page, with gentle crossfade
+    tmp.current.copy(palette[p0].bg).lerp(palette[p1].bg, easeT)
+    if (!scene.background) scene.background = new THREE.Color()
+    scene.background.lerp(tmp.current, 1 - Math.pow(0.0001, dt))
+
+    // Ease camera toward target
+    target.current.set(panX, panY, z)
+    camera.position.lerp(target.current, 1 - Math.pow(0.0001, dt))
+    camera.fov = THREE.MathUtils.damp(camera.fov, fov, 6, dt)
+    camera.updateProjectionMatrix()
   })
-  const y = THREE.MathUtils.lerp(4, 0, progress) // slide in from top
-  const opacity = THREE.MathUtils.smoothstep(0, 0.2, progress) * (1 - THREE.MathUtils.smoothstep(0.8, 1, progress))
-  return (
-    <group position={[0, y, 0]}>
-      <Float speed={2} rotationIntensity={0.5} floatIntensity={0.6}>
-        <mesh ref={ref} castShadow receiveShadow>
-          <torusKnotGeometry args={[1.2, 0.36, 220, 26]} />
-          <meshStandardMaterial metalness={0.6} roughness={0.2} envMapIntensity={1.2} transparent opacity={opacity} />
-        </mesh>
-      </Float>
-    </group>
-  )
+
+  return null
 }
 
-function SceneTwo({ progress }) {
+/** One page with a centered rotating box and a caption */
+function Page({ index, z, color }) {
   const ref = useRef()
+  const size = useMemo(() => 1 + (index % 3) * 0.3, [index])
+
   useFrame((_, dt) => {
     if (!ref.current) return
     ref.current.rotation.x += dt * 0.4
-    ref.current.rotation.z += dt * 0.2
+    ref.current.rotation.y += dt * 0.6
   })
-  const x = THREE.MathUtils.lerp(-6, 0, progress) // slide from left
-  const scale = THREE.MathUtils.lerp(0.6, 1, THREE.MathUtils.smoothstep(0, 0.6, progress))
-  const opacity = THREE.MathUtils.smoothstep(0.05, 0.25, progress)
-  return (
-    <group position={[x, 0, 0]}>
-      <Float speed={1.6} rotationIntensity={0.4} floatIntensity={0.4}>
-        <mesh ref={ref} scale={scale} castShadow receiveShadow>
-          <icosahedronGeometry args={[1.6, 1]} />
-          <meshStandardMaterial metalness={0.2} roughness={0.35} envMapIntensity={1.2} transparent opacity={opacity} />
-        </mesh>
-      </Float>
-    </group>
-  )
-}
 
-function SceneThree({ progress }) {
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: new THREE.Color('#8ab4ff'), roughness: 0.25, metalness: 0.5 }), [])
-  const bounce = THREE.MathUtils.smoothstep(0.1, 0.7, progress)
-  const z = THREE.MathUtils.lerp(-6, 0, progress)
-  const rot = bounce * Math.PI * 2
-  const opacity = THREE.MathUtils.smoothstep(0.15, 0.35, progress)
   return (
-    <group position={[0, 0, z]} rotation={[0, rot, 0]}>
-      <Float speed={1.2} rotationIntensity={0.2} floatIntensity={0.25}>
-        <mesh castShadow receiveShadow material={mat}>
-          <boxGeometry args={[2.5, 1.2, 1.2]} />
-        </mesh>
-      </Float>
-      {/* Accents */}
-      <mesh position={[1.6, 0, 0]}>
-        <sphereGeometry args={[0.45, 32, 32]} />
-        <meshStandardMaterial roughness={0.1} metalness={0.9} envMapIntensity={1.5} transparent opacity={opacity} />
+    <group position={[0, 0, z]}>
+      <mesh ref={ref}>
+        <boxGeometry args={[size, size, size]} />
+        <meshStandardMaterial color={color} roughness={0.6} metalness={0.1} />
       </mesh>
-    </group>
-  )
-}
 
-function SceneFour({ progress }) {
-  // Minimal "portal" style ring
-  const ringRef = useRef()
-  useFrame((_, dt) => {
-    if (!ringRef.current) return
-    ringRef.current.rotation.y += dt * 0.25
-  })
-  const s = THREE.MathUtils.lerp(0.5, 1.2, THREE.MathUtils.smoothstep(0.2, 0.9, progress))
-  const y = THREE.MathUtils.lerp(-4, 0, progress)
-  const opacity = THREE.MathUtils.smoothstep(0.2, 0.5, progress)
-  return (
-    <group position={[0, y, 0]} scale={s}>
-      <mesh ref={ringRef}>
-        <torusGeometry args={[1.8, 0.08, 32, 220]} />
-        <meshStandardMaterial metalness={0.9} roughness={0.05} envMapIntensity={1.4} transparent opacity={opacity} />
-      </mesh>
-      <mesh position={[0, 0, 0]}>
-        <octahedronGeometry args={[0.9, 0]} />
-        <meshStandardMaterial roughness={0.2} metalness={0.6} envMapIntensity={1.4} transparent opacity={opacity} />
-      </mesh>
-    </group>
-  )
-}
+      {/* subtle light so the box has shape even on dark bgs */}
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[2, 2, 2]} intensity={0.9} />
 
-/** Optional HTML overlays for each page */
-function HtmlOverlay({ pages }) {
-  return (
-    <>
-      {[...Array(pages)].map((_, i) => (
-        <Html key={i} center style={{ pointerEvents: 'none' }} position={[0, 0, 0]}>
-          <div className="text-white text-center select-none">
-            <div className="text-3xl md:text-5xl font-semibold tracking-tight drop-shadow-lg">
-              {i === 0 && 'Depth Dive'}
-              {i === 1 && 'Structure & Symmetry'}
-              {i === 2 && 'Motion & Balance'}
-              {i === 3 && 'Portal'}
-            </div>
-            <div className="mt-2 opacity-80 text-sm md:text-base">
-              {i === 0 && 'Scroll to descend. Each stop reveals a new object.'}
-              {i === 1 && 'Clean geometry, gentle spin, full-screen focus.'}
-              {i === 2 && 'Subtle drift with anchored accents.'}
-              {i === 3 && 'A calm landing. Reset or explore back up.'}
-            </div>
-          </div>
-        </Html>
-      ))}
-    </>
+      <Html center>
+        <div className="mt-36 select-none rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-white backdrop-blur">
+          Page {index + 1}
+        </div>
+      </Html>
+    </group>
   )
 }
