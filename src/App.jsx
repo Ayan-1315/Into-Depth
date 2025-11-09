@@ -1,25 +1,19 @@
-import { useState, useEffect } from 'react';
-import './App.css';
+import { useState } from 'react'
+import IntroPage from './pages/IntroPage'
+import './App.css'
 
 export default function App() {
-  const [revealed, setRevealed] = useState(false);
-
-  useEffect(() => {
-    const updateMouse = (e) => {
-      document.documentElement.style.setProperty('--mouse-x', `${e.clientX}px`);
-      document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
-    };
-    window.addEventListener('mousemove', updateMouse);
-    return () => window.removeEventListener('mousemove', updateMouse);
-  }, []);
+  const [sceneReady, setSceneReady] = useState(false)
 
   return (
     <>
-      <div className={`cover ${revealed ? 'revealed' : ''}`} />
-      <div className="content">
-        <h1>Into The Depth</h1>
-        <button onClick={() => setRevealed(true)}>Find the light</button>
-      </div>
+      {!sceneReady && <IntroPage onReveal={() => setSceneReady(true)} />}
+
+      {sceneReady && (
+        <div className="lit-screen">
+          {/* Your 3D scene or scroll animation will go here */}
+        </div>
+      )}
     </>
-  );
+  )
 }
