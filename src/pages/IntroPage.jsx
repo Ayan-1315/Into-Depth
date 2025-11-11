@@ -84,7 +84,7 @@ function Scene({ lightOn, setLightOn }) {
       {lightOn && (
         <primitive
           object={banana.scene}
-          position={[0.15,  0.2, 0]}
+          position={[0.15,  0.25, 0]}
           rotation={[0, Math.PI / 4, 0]}
           scale={0.025}
         />
