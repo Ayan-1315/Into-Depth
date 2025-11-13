@@ -3,17 +3,21 @@ import IntroPage from './pages/IntroPage'
 import './App.css'
 
 export default function App() {
-  const [sceneReady, setSceneReady] = useState(false)
+  const [started, setStarted] = useState(false)
 
   return (
     <>
-      {!sceneReady && <IntroPage onReveal={() => setSceneReady(true)} />}
-
-      {sceneReady && (
-        <div className="lit-screen">
-          {/* Your 3D scene or scroll animation will go here */}
+      {!started ? (
+        <IntroPage onEnter={() => setStarted(true)} />
+      ) : (
+        // Scene will create its own Canvas (keeps separation)
+        <div style={{ width: '100vw', height: '100vh' }}>
+          <SceneCanvas />
         </div>
       )}
     </>
   )
 }
+
+// Lazy load the Canvas/Scene into the same file to keep this snippet self-contained
+import SceneCanvas from './components/SceneCanvas'
