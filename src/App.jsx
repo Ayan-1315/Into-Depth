@@ -1,23 +1,20 @@
+// src/App.jsx
 import { useState } from 'react'
-import IntroPage from './pages/IntroPage'
-import './App.css'
+import IntroPage from './pages/IntroPage' //
+// Import the new MainExperience component
+import MainExperience from './pages/MainExperience'
+import './App.css' //
 
 export default function App() {
-  const [started, setStarted] = useState(false)
+  const [sceneReady, setSceneReady] = useState(false) //
 
   return (
     <>
-      {!started ? (
-        <IntroPage onEnter={() => setStarted(true)} />
-      ) : (
-        // Scene will create its own Canvas (keeps separation)
-        <div style={{ width: '100vw', height: '100vh' }}>
-          <SceneCanvas />
-        </div>
-      )}
+      {/* This prop is now correctly passed and will be used by IntroPage */}
+      {!sceneReady && <IntroPage onReveal={() => setSceneReady(true)} />}
+
+      {/* When sceneReady is true, render the MainExperience component */}
+      {sceneReady && <MainExperience />}
     </>
   )
 }
-
-// Lazy load the Canvas/Scene into the same file to keep this snippet self-contained
-import SceneCanvas from './components/SceneCanvas'

@@ -1,3 +1,4 @@
+/* src/App.css */
 .lit-screen {
   position: fixed;
   inset: 0;
@@ -10,3 +11,4 @@
   background: #121212;
   z-index: 0;
 }
+/* The stray '}' at the end of the original file has been removed. */
