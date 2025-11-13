@@ -138,3 +138,4 @@ function Scene({ lightOn, setLightOn }) {
 useGLTF.preload('/models/hanging_lamp.glb')
 useGLTF.preload('/models/Table.glb')
 useGLTF.preload('/models/banana.glb')
+
