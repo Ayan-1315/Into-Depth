@@ -1,51 +1,45 @@
-/* Full-screen green intro and centered text — with fade */
-.intro-wrapper{
-  position: fixed;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background: linear-gradient(180deg, #0fa65b 0%, #0b8f3b 100%); /* green */
-  color: white;
-  z-index: 20; /* on top to cover main scene while visible */
-  cursor: default;
-  overflow: hidden;
-  transition: opacity 0.7s ease, transform 0.7s ease;
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
+/* make sure canvas is underneath everything */
+.intro-wrapper canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 0 !important;    /* canvas is at bottom */
+  pointer-events: none;     /* allow pointer events to pass through unless you need 3D interaction */
 }
 
-/* when fading, make it invisible and slide up slightly */
-.intro-wrapper.intro-fade{
-  opacity: 0;
-  transform: translateY(-6vh);
+/* root wrapper must sit above canvas */
+.intro-wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: 999;             /* very high so overlay always above canvas */
+  /* keep your transform-based fade working as before */
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+/* particles container over heading: fixed so it won't be affected by transforms */
+.header-particles-container {
+  position: fixed;          /* changed from absolute -> fixed */
+  z-index: 995;             /* under header but above canvas */
   pointer-events: none;
 }
 
-/* Big centered title */
+/* header itself must be above particle canvas */
 .intro-header{
-  position: absolute;
+  position: fixed;          /* fixed so it sits in viewport */
   top: 14vh;
-  font-size: clamp(2.2rem, 4vw, 3.6rem);
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
-  -webkit-text-stroke: 0.3px rgba(0,0,0,0.12);
+  z-index: 997;             /* above particles */
+  pointer-events: none;
 }
 
-/* small CTA text under header */
-.intro-sub{
-  position: absolute;
-  top: calc(14vh + 4.2rem);
-  font-size: 1rem;
-  opacity: 0.92;
+/* CTA text under heading also fixed and above canvas */
+.intro-sub {
+  position: fixed;
+  top: calc(14vh + 5.2rem);
+  z-index: 997;
 }
 
-/* make Canvas full-bleed */
-canvas {
-  width: 100vw !important;
-  height: 100vh !important;
-  display: block;
+/* when wrapper is fading, pointer-events none to avoid intercepting scroll */
+.intro-wrapper.intro-fade {
+  pointer-events: none;
 }

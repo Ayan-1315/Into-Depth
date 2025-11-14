@@ -1,23 +1,84 @@
-/* Light/lit screen (main experience) */
+/* global reset for canvas full-bleed */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Root wrapper for this experience */
+.experience-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #0fa65b 0%, #0b8f3b 100%); /* green intro background */
+}
+
+/* make canvas full screen */
+.experience-canvas {
+  width: 100vw !important;
+  height: 100vh !important;
+  display: block;
+  z-index: 1;
+  /* let the canvas be visible under the overlay */
+}
+
+/* Intro overlay sits above the canvas and animates using CSS variable --so */
+.intro-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none; /* don't block scroll gestures */
+  z-index: 5;
+  /* we can use the CSS var --so to change background/opacity if needed */
+  transition: opacity 280ms linear;
+}
+
+/* The core text — will translate RIGHT -> LEFT as --so goes 0 -> 1.
+   We use calc to turn the numeric var into transform.
+   When --so=0 => translateX(0%)
+   When --so=1 => translateX(-120%) (completely moved left off-screen)
+*/
+.intro-text {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  font-weight: 900;
+  color: #fff;
+  font-size: clamp(2.4rem, 7vw, 6.2rem);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-align: center;
+  will-change: transform, opacity;
+  transform: translateX(calc(var(--so) * -120%));
+  /* ease slightly by applying transform smoothing via transition — but we mainly update var each frame */
+  transition: transform 0.12s linear;
+  opacity: calc(1 - var(--so) * 1.3);
+  text-shadow: 0 6px 22px rgba(0,0,0,0.28);
+  pointer-events: none;
+}
+
+/* small subtitle below the heading */
+.intro-sub {
+  margin-top: 1rem;
+  font-size: 1rem;
+  color: rgba(255,255,255,0.95);
+  opacity: calc(1 - var(--so) * 1.6);
+  transform: translateX(calc(var(--so) * -60%));
+  transition: transform 0.12s linear, opacity 0.12s linear;
+  pointer-events: none;
+}
+
+/* tweak for when fully into main scene make overlay invisible */
+:root {
+  /* default scroll offset (0) */
+  --so: 0;
+}
+
+/* lit-screen (main scene background when fully in main) — sits behind canvas but not used for intro now */
 .lit-screen {
   position: fixed;
   inset: 0;
   background: linear-gradient(180deg, #f8fafc 0%, #e6f0f2 100%);
   z-index: 0;
-}
-
-/* Dark-screen kept if you need it later */
-.dark-screen {
-  position: fixed;
-  inset: 0;
-  background: #121212;
-  z-index: 0;
-}
-
-/* Remove body scroll bar gap and make page full height */
-html, body, #root {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden; /* scroll handled by ScrollControls */
 }
