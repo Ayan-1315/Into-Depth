@@ -1,23 +1,51 @@
-.intro-wrapper {
-  width: 100vw;
-  height: 100vh;
-  background: black;
+/* Full-screen green intro and centered text — with fade */
+.intro-wrapper{
+  position: fixed;
+  inset: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  background: linear-gradient(180deg, #0fa65b 0%, #0b8f3b 100%); /* green */
   color: white;
-  text-align: center;
-  cursor: pointer;
+  z-index: 20; /* on top to cover main scene while visible */
+  cursor: default;
+  overflow: hidden;
+  transition: opacity 0.7s ease, transform 0.7s ease;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
-.intro-header {
-  font-size: 3rem;
-  font-weight: bold;
-  margin-bottom: 2rem;
+/* when fading, make it invisible and slide up slightly */
+.intro-wrapper.intro-fade{
+  opacity: 0;
+  transform: translateY(-6vh);
+  pointer-events: none;
 }
 
-.intro-content p {
-  font-size: 1.5rem;
-  opacity: 0.8;
+/* Big centered title */
+.intro-header{
+  position: absolute;
+  top: 14vh;
+  font-size: clamp(2.2rem, 4vw, 3.6rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  -webkit-text-stroke: 0.3px rgba(0,0,0,0.12);
+}
+
+/* small CTA text under header */
+.intro-sub{
+  position: absolute;
+  top: calc(14vh + 4.2rem);
+  font-size: 1rem;
+  opacity: 0.92;
+}
+
+/* make Canvas full-bleed */
+canvas {
+  width: 100vw !important;
+  height: 100vh !important;
+  display: block;
 }

@@ -1,14 +1,23 @@
-/* src/App.css */
+/* Light/lit screen (main experience) */
 .lit-screen {
   position: fixed;
   inset: 0;
-  background: #fefefe;
+  background: linear-gradient(180deg, #f8fafc 0%, #e6f0f2 100%);
   z-index: 0;
 }
+
+/* Dark-screen kept if you need it later */
 .dark-screen {
   position: fixed;
   inset: 0;
   background: #121212;
   z-index: 0;
 }
-/* The stray '}' at the end of the original file has been removed. */
+
+/* Remove body scroll bar gap and make page full height */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* scroll handled by ScrollControls */
+}
