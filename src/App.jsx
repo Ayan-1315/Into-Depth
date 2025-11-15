@@ -1,7 +1,15 @@
-import React from 'react'
+import React, { useState } from 'react'
+import IntroPage from './pages/IntroPage'
 import Experience from './pages/Experience'
 import './App.css'
 
 export default function App() {
-  return <Experience />
+  const [sceneReady, setSceneReady] = useState(false)
+
+  return (
+    <>
+      {!sceneReady && <IntroPage onReveal={() => setSceneReady(true)} />}
+      {sceneReady && <Experience />}
+    </>
+  )
 }

@@ -10,13 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@react-three/drei": "^10.7.6",
+    "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.0",
     "@react-three/postprocessing": "^3.0.4",
+    "postprocessing": "^6.38.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-tsparticles": "^2.12.2",
-    "three": "^0.181.0",
+    "three": "^0.181.1",
     "tsparticles": "^3.9.1"
   },
   "devDependencies": {

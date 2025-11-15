@@ -1,108 +1,128 @@
 // src/pages/Experience.jsx
-import React, { useRef, useEffect } from 'react'
+import React, { Suspense, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { ScrollControls, useScroll } from '@react-three/drei'
+import { ScrollControls, useScroll, ContactShadows, Environment } from '@react-three/drei'
 import * as THREE from 'three'
 import '../App.css'
 import Banana from '../components/Banana'
 import SugarCube from '../components/SugarCube'
 import Ant from '../components/Ant'
 
-/**
- * ScrollSync component:
- * - runs inside the Canvas and updates a CSS variable "--so" with scroll.offset (0..1..n).
- * - we'll use that CSS var to animate the overlay text with pure CSS.
- */
-function ScrollSync() {
-  const scroll = useScroll()
-  useFrame(() => {
-    // scroll.offset ranges 0..pages-1 normalized across pages; for pages=2 it goes 0..1
-    const offset = scroll.offset // number 0..1
-    // clamp and set CSS variable on root (scoped if you want)
-    document.documentElement.style.setProperty('--so', offset.toString())
-  })
-  return null
-}
-
-/**
- * CameraController:
- * - lerps camera position based on scroll offset to create smooth transition from intro -> main.
- * - tweak values to match desired movement.
- */
 function CameraController() {
   const { camera } = useThree()
   const scroll = useScroll()
+
+  const from = useMemo(() => new THREE.Vector3(0, 4.6, 16), [])
+  const to = useMemo(() => new THREE.Vector3(0, -2.6, 4.0), [])
+  const control = useMemo(() => new THREE.Vector3(), [])
+  const rotStart = useMemo(() => new THREE.Euler(-0.18, 0, 0), [])
+  const rotEnd = useMemo(() => new THREE.Euler(0.36, 0, 0), [])
+  const quat = useMemo(() => new THREE.Quaternion(), [])
+  const qStart = useMemo(() => new THREE.Quaternion().setFromEuler(rotStart), [])
+  const qEnd = useMemo(() => new THREE.Quaternion().setFromEuler(rotEnd), [])
+
   useFrame((state, delta) => {
-    const t = scroll.offset // 0 -> intro, 1 -> main
-    // camera start (intro): z=6, x=0.8 (slightly off center), y=1.3 (higher)
-    // camera end (main): z=3.8, x=0, y=0.5 (closer & lower)
-    const from = new THREE.Vector3(0.8, 1.3, 6)
-    const to   = new THREE.Vector3(0.0, 0.5, 3.8)
-    // interpolate target
-    const target = from.lerpVectors(from, to, t)
-    // smooth lerp the camera
-    camera.position.lerp(target, 1 - Math.pow(0.001, delta))
-    camera.lookAt(0, 0.15, 0)
+    const t = THREE.MathUtils.smoothstep(THREE.MathUtils.clamp(scroll.offset, 0, 1), 0, 1)
+    control.lerpVectors(from, to, t)
+    const arc = Math.sin(t * Math.PI) * 1.6
+    control.y += arc
+    camera.position.lerp(control, 1 - Math.pow(0.001, delta))
+    quat.copy(qStart).slerp(qEnd, t)
+    camera.quaternion.slerp(quat, 1 - Math.pow(0.001, delta))
+    const jitter = Math.sin(state.clock.elapsedTime * 0.9) * 0.0012
+    camera.position.x += jitter * (1 - t)
   })
   return null
 }
 
-/**
- * SceneContent:
- * - shows banana + sugar cubes + ants in the world coordinates expected.
- * - these objects are present from the start, but initially the intro overlay hides them.
- */
-function SceneContent() {
-  // cube positions used by ants (same as earlier)
-  const cubeA = new THREE.Vector3(1.1, 0.18, -0.9)
-  const cubeB = new THREE.Vector3(-1.2, 0.18, -1.8)
-  const getTargets = () => [cubeA.clone(), cubeB.clone()]
+function DebugBox() {
+  return (
+    <mesh position={[0, 0.6, 0]}>
+      <boxGeometry args={[1.6, 1.6, 1.6]} />
+      <meshStandardMaterial color="orange" />
+    </mesh>
+  )
+}
 
-  // subtle ground plane for depth (optional)
+function SceneContent() {
+  const cubePositions = useMemo(
+    () => [
+      new THREE.Vector3(0.9, 0.12, -0.9),
+      new THREE.Vector3(-1.1, 0.12, -1.8),
+      new THREE.Vector3(0.0, 0.12, -2.4)
+    ],
+    []
+  )
+
+  const getTargets = () => cubePositions.map((v) => v.clone())
+
+  const antPositionsRef = useRef([])
+  const ants = useMemo(() => {
+    const list = []
+    const count = 28
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2
+      const radius = 0.35 + Math.random() * 1.8
+      const x = Math.cos(angle) * radius
+      const z = -0.4 - Math.random() * 2.6
+      list.push([x, 0.05, z])
+    }
+    antPositionsRef.current = list.map((p) => new THREE.Vector3(p[0], p[1], p[2]))
+    return list
+  }, [])
+
+  const neighborsGetter = () => antPositionsRef.current
+
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <directionalLight intensity={0.35} position={[5, 5, 5]} />
+      {/* Hemisphere gives a gentle fill (fast) */}
+      <hemisphereLight skyColor={'#a6d9ff'} groundColor={'#102033'} intensity={0.6} />
+      {/* stronger directional + point for clarity */}
+      <directionalLight position={[4, 8, 4]} intensity={0.9} />
+      <pointLight position={[-3, 2, -2]} intensity={0.6} />
+      <spotLight position={[0, 6, 2]} angle={0.6} penumbra={0.4} intensity={1.0} castShadow />
 
-      {/* Banana at center */}
-      <Banana position={[0, 0.15, 0]} scale={0.02} />
+      {/* Environment provides subtle reflections but is lightweight */}
+      <Environment preset="studio" />
 
-      {/* Sugar cubes */}
-      <SugarCube position={[cubeA.x, cubeA.y, cubeA.z]} />
-      <SugarCube position={[cubeB.x, cubeB.y, cubeB.z]} />
+      {/* Banana hero */}
+      <Banana position={[0, 0.18, 0]} scale={1.05} />
 
-      {/* Ants */}
-      <Ant startPos={[0.8, 0.05, -0.4]} getTargets={getTargets} />
-      <Ant startPos={[1.2, 0.05, -1.6]} getTargets={getTargets} />
-      <Ant startPos={[-0.2, 0.05, -0.6]} getTargets={getTargets} />
-      <Ant startPos={[-1.0, 0.05, -0.9]} getTargets={getTargets} />
-      <Ant startPos={[-0.6, 0.05, -1.9]} getTargets={getTargets} />
+      {/* sugar cubes */}
+      <SugarCube position={[cubePositions[0].x, cubePositions[0].y, cubePositions[0].z]} size={0.18} />
+      <SugarCube position={[cubePositions[1].x, cubePositions[1].y, cubePositions[1].z]} size={0.18} />
+      <SugarCube position={[cubePositions[2].x, cubePositions[2].y, cubePositions[2].z]} size={0.18} />
+
+      {/* ants */}
+      {ants.map((pos, idx) => (
+        <Ant key={`ant-${idx}`} startPos={pos} getTargets={getTargets} neighborsGetter={neighborsGetter} speed={0.95} />
+      ))}
+
+      <ContactShadows rotation-x={Math.PI / 2} position={[0, 0.01, 0]} opacity={0.48} width={6} height={6} blur={2.2} far={2.8} />
+
+      <mesh position={[0, -0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[80, 80]} />
+        <meshStandardMaterial color="#000000" transparent opacity={0.02} />
+      </mesh>
     </>
   )
 }
 
-/**
- * Experience main component:
- * - ScrollControls pages={2} handles the scroll area:
- *   - page 0 = intro, page 1 = main scene
- * - CSS var --so (0..1) is set by ScrollSync and used to animate the overlay text.
- */
 export default function Experience() {
   return (
     <div className="experience-root">
-      {/* Overlay intro text — animated via CSS using --so */}
-      <div className="intro-overlay">
-        <div className="intro-text">Into The Depth</div>
-        <div className="intro-sub">scroll to enter</div>
-      </div>
-
-      {/* 3D Canvas */}
-      <Canvas className="experience-canvas" camera={{ position: [0.8, 1.3, 6], fov: 50 }}>
-        {/* ScrollControls with 2 pages: index 0 is intro, index 1 is main */}
+      <Canvas
+        className="experience-canvas"
+        camera={{ position: [0, 4.6, 16], fov: 48 }}
+        shadows
+        // no explicit background here — canvas is transparent so CSS gradient shows
+        style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'transparent' }}
+      >
         <ScrollControls pages={2} damping={0.12}>
-          <ScrollSync />
           <CameraController />
-          <SceneContent />
+          <Suspense fallback={<DebugBox />}>
+            <SceneContent />
+          </Suspense>
         </ScrollControls>
       </Canvas>
     </div>

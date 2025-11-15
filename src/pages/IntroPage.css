@@ -1,45 +1,51 @@
-/* make sure canvas is underneath everything */
-.intro-wrapper canvas {
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 0 !important;    /* canvas is at bottom */
-  pointer-events: none;     /* allow pointer events to pass through unless you need 3D interaction */
-}
-
-/* root wrapper must sit above canvas */
+/* intro overlay */
 .intro-wrapper {
   position: fixed;
   inset: 0;
-  z-index: 999;             /* very high so overlay always above canvas */
-  /* keep your transform-based fade working as before */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  pointer-events: auto;
+  background: transparent;
   transition: opacity 0.7s ease, transform 0.7s ease;
 }
 
-/* particles container over heading: fixed so it won't be affected by transforms */
-.header-particles-container {
-  position: fixed;          /* changed from absolute -> fixed */
-  z-index: 995;             /* under header but above canvas */
-  pointer-events: none;
+.intro-wrapper.intro-fade { opacity: 0; transform: translateY(-6vh); pointer-events: none; }
+
+/* particles layer */
+.intro-particles-wrap { position: fixed; inset: 0; z-index: 10002; pointer-events: none; }
+
+/* header - letter mask achieved by applying a radial mask centered at mouse */
+.intro-header { position: fixed; top: 14vh; z-index: 10005; pointer-events: none; }
+.intro-title {
+  margin: 0;
+  color: #dfffe6;
+  font-weight: 900;
+  font-size: clamp(2.8rem, 8vw, 7.2rem);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-align: center;
+  text-shadow: 0 10px 30px rgba(0,0,0,0.6);
+
+  /* radial mask at mouse position - creates a transparent hole where pointer is */
+  -webkit-mask-image: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(0,0,0,0) 0px,
+    rgba(0,0,0,0) 36px,
+    rgba(0,0,0,0.2) 54px,
+    rgba(0,0,0,0.95) 160px);
+  mask-image: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(0,0,0,0) 0px,
+    rgba(0,0,0,0) 36px,
+    rgba(0,0,0,0.2) 54px,
+    rgba(0,0,0,0.95) 160px);
 }
 
-/* header itself must be above particle canvas */
-.intro-header{
-  position: fixed;          /* fixed so it sits in viewport */
-  top: 14vh;
-  z-index: 997;             /* above particles */
-  pointer-events: none;
-}
+.intro-sub { position: fixed; top: calc(14vh + 6.2rem); z-index: 10005; color: rgba(255,255,255,0.9); }
 
-/* CTA text under heading also fixed and above canvas */
-.intro-sub {
-  position: fixed;
-  top: calc(14vh + 5.2rem);
-  z-index: 997;
-}
-
-/* when wrapper is fading, pointer-events none to avoid intercepting scroll */
-.intro-wrapper.intro-fade {
-  pointer-events: none;
+/* responsive */
+@media (max-width: 720px) {
+  .intro-title { font-size: clamp(1.8rem, 12vw, 4.2rem); }
+  .intro-sub { top: calc(14vh + 4rem); }
 }
