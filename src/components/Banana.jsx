@@ -11,7 +11,7 @@ export default function Banana({
   const { scene: bananaScene } = useGLTF('/models/banana.glb')
 
   // Fix tiny model scale (tweak between 30-60 if needed)
-  const MODEL_SCALE_FIX = 0.51
+  const MODEL_SCALE_FIX = 0.5
 
   return (
     <group position={position} rotation={rotation} scale={scale * MODEL_SCALE_FIX} name={id}>
