@@ -1,4 +1,4 @@
-/* intro overlay */
+/* Intro wrapper & stacking */
 .intro-wrapper {
   position: fixed;
   inset: 0;
@@ -11,41 +11,56 @@
   background: transparent;
   transition: opacity 0.7s ease, transform 0.7s ease;
 }
-
 .intro-wrapper.intro-fade { opacity: 0; transform: translateY(-6vh); pointer-events: none; }
 
-/* particles layer */
+/* particles */
 .intro-particles-wrap { position: fixed; inset: 0; z-index: 10002; pointer-events: none; }
 
-/* header - letter mask achieved by applying a radial mask centered at mouse */
+/* header layout */
 .intro-header { position: fixed; top: 14vh; z-index: 10005; pointer-events: none; }
-.intro-title {
-  margin: 0;
-  color: #dfffe6;
+.intro-title { display: inline-block; }
+
+/* letters */
+.intro-letter {
+  display: inline-block;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
   font-weight: 900;
   font-size: clamp(2.8rem, 8vw, 7.2rem);
+  color: #dfffe6;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  text-align: center;
+  line-height: 1;
+  margin: 0 0.04em;
+  transition: opacity 90ms linear, filter 120ms linear, transform 120ms linear;
+  will-change: opacity, transform, filter;
   text-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  opacity: 1; /* default */
+}
 
-  /* radial mask at mouse position - creates a transparent hole where pointer is */
+/* small space */
+.intro-space { width: 0.5rem; display: inline-block }
+
+/* subtitle */
+.intro-sub { position: fixed; top: calc(14vh + 6.2rem); z-index: 10005; color: rgba(255,255,255,0.9); }
+
+/* pointer hole mask for the whole heading (keeps effect if you prefer mask + per-letter) */
+.intro-title {
   -webkit-mask-image: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
     rgba(0,0,0,0) 0px,
     rgba(0,0,0,0) 36px,
-    rgba(0,0,0,0.2) 54px,
-    rgba(0,0,0,0.95) 160px);
+    rgba(0,0,0,0.18) 54px,
+    rgba(0,0,0,0.96) 160px);
   mask-image: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
     rgba(0,0,0,0) 0px,
     rgba(0,0,0,0) 36px,
-    rgba(0,0,0,0.2) 54px,
-    rgba(0,0,0,0.95) 160px);
+    rgba(0,0,0,0.18) 54px,
+    rgba(0,0,0,0.96) 160px);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
 }
 
-.intro-sub { position: fixed; top: calc(14vh + 6.2rem); z-index: 10005; color: rgba(255,255,255,0.9); }
-
-/* responsive */
+/* responsive tweaks */
 @media (max-width: 720px) {
-  .intro-title { font-size: clamp(1.8rem, 12vw, 4.2rem); }
+  .intro-letter { font-size: clamp(1.8rem, 12vw, 4.2rem); }
   .intro-sub { top: calc(14vh + 4rem); }
 }
